@@ -4,39 +4,80 @@ from datetime import datetime
 import time
 import os
 
-os.makedirs("data", exist_ok=True)
+# Create folders
+os.makedirs("data/daily", exist_ok=True)
+os.makedirs("data/hourly", exist_ok=True)
 
-coins = [
-    "bitcoin", "ethereum", "tether", "binancecoin", "solana",
-    "ripple", "cardano", "dogecoin", "tron", "polkadot"
-]
+# Coingecko names (for filenames) -> Cryptocompare symbols (for API)
+symbol_map = {
+    "bitcoin": "BTC",
+    "ethereum": "ETH",
+    "tether": "USDT",
+    "binancecoin": "BNB",
+    "solana": "SOL",
+    "ripple": "XRP",
+    "cardano": "ADA",
+    "dogecoin": "DOGE",
+    "tron": "TRX",
+    "polkadot": "DOT"
+}
 
-days = 90
-
-def fetch_coin_data(coin):
-    url = f"https://api.coingecko.com/api/v3/coins/{coin}/market_chart?vs_currency=usd&days={days}"
+def fetch_daily_data(symbol, limit=90):
+    """Fetch daily historical data from Cryptocompare"""
+    url = f"https://min-api.cryptocompare.com/data/v2/histoday?fsym={symbol}&tsym=USD&limit={limit}"
     resp = requests.get(url)
     resp.raise_for_status()
     data = resp.json()
 
+    if "Data" not in data or "Data" not in data["Data"]:
+        raise ValueError(f"No daily data found for {symbol}")
+
     records = []
-    for i in range(len(data["prices"])):
-        timestamp = data["prices"][i][0]
-        price = data["prices"][i][1]
-        market_cap = data["market_caps"][i][1]
-        volume = data["total_volumes"][i][1]
+    for item in data["Data"]["Data"]:
+        timestamp = datetime.utcfromtimestamp(item["time"])
+        records.append([
+            symbol, timestamp, item["open"], item["high"],
+            item["low"], item["close"], item["volumefrom"], item["volumeto"]
+        ])
 
-        date = datetime.utcfromtimestamp(timestamp/1000)
-        records.append([coin, date, price, market_cap, volume])
-
-    return pd.DataFrame(records, columns=["coin", "timestamp", "price", "market_cap", "volume"])
+    return pd.DataFrame(records, columns=["coin", "timestamp", "open", "high", "low", "close", "volume_from", "volume_to"])
 
 
-for coin in coins:
+def fetch_hourly_data(symbol, limit=720):
+    """Fetch hourly historical data from Cryptocompare"""
+    url = f"https://min-api.cryptocompare.com/data/v2/histohour?fsym={symbol}&tsym=USD&limit={limit}"
+    resp = requests.get(url)
+    resp.raise_for_status()
+    data = resp.json()
+
+    if "Data" not in data or "Data" not in data["Data"]:
+        raise ValueError(f"No hourly data found for {symbol}")
+
+    records = []
+    for item in data["Data"]["Data"]:
+        timestamp = datetime.utcfromtimestamp(item["time"])
+        records.append([
+            symbol, timestamp, item["open"], item["high"],
+            item["low"], item["close"], item["volumefrom"], item["volumeto"]
+        ])
+
+    return pd.DataFrame(records, columns=["coin", "timestamp", "open", "high", "low", "close", "volume_from", "volume_to"])
+
+
+# Loop over coins
+for coin, symbol in symbol_map.items():
     try:
-        df_coin = fetch_coin_data(coin)
-        df_coin.to_csv(f"data/{coin}.csv", index=False)  # save per coin
-        print(f"✅ Saved {coin}.csv")
-        time.sleep(20)  # avoid rate limit
+        # Daily
+        df_daily = fetch_daily_data(symbol, limit=90)
+        df_daily.to_csv(f"data/daily/{coin}_daily.csv", index=False)
+        print(f"✅ Saved daily {coin}")
+
+        # Hourly
+        df_hourly = fetch_hourly_data(symbol, limit=720)
+        df_hourly.to_csv(f"data/hourly/{coin}_hourly.csv", index=False)
+        print(f"✅ Saved hourly {coin}")
+
+        time.sleep(10)  # avoid rate limit
+
     except Exception as e:
         print(f"⚠️ Error with {coin}: {e}")
