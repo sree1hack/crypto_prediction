@@ -68,12 +68,3 @@ CryptoPredictPro is a full-stack web application designed to forecast cryptocurr
    npm run dev
    ```
 
-## 🌐 Open Source & Community
-
-Contributed to machine learning forecasting models in private repositories (e.g., **Infosys ML Prediction**) and actively participate in technical discussions across **GitHub**, **Stack Exchange**, and **Quora** to solve complex engineering challenges.
-
-Check out my profiles: [GitHub](https://github.com/sree1hack) | [Stack Exchange](#) | [Quora](#)
-
-## 📜 License
-
-This project is licensed under the MIT License.
